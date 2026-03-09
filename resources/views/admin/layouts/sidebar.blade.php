@@ -30,6 +30,17 @@
             </li>
 
             <li>
+    <a href="{{ route('admin.categories.index') }}"
+        class="flex items-center space-x-3 px-4 py-3 rounded-lg {{ request()->routeIs('admin.categories.*') ? 'bg-black text-white' : 'text-gray-700 hover:bg-white' }} transition-all duration-150">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 7h10M7 12h10M7 17h10M4 7h.01M4 12h.01M4 17h.01" />
+        </svg>
+        <span class="text-sm font-medium">Categories</span>
+    </a>
+</li>
+
+            <li>
                 <a href="{{ route('admin.admin-users.index') }}"
                     class="flex items-center space-x-3 px-4 py-3 rounded-lg {{ request()->routeIs('admin.admin-users.*') ? 'bg-black text-white' : 'text-gray-700 hover:bg-white' }} transition-all duration-150">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
