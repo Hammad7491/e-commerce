@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('admin-users', AdminUserController::class)->except(['show']);
         Route::resource('categories', CategoryController::class)->except(['show']);
+        Route::post('products/bulk-destroy', [ProductController::class, 'bulkDestroy'])->name('products.bulkDestroy');
+        Route::resource('products', ProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
