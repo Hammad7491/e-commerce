@@ -155,12 +155,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            transition: transform 0.2s ease;
+            color: #ffffff;
+            transition: transform 0.2s ease, color 0.2s ease;
             background: transparent;
             border: 0;
             padding: 0;
             cursor: pointer;
+        }
+
+        .wishlist-btn.active {
+            color: #ef4444;
         }
 
         .wishlist-btn:hover {
@@ -313,6 +317,46 @@
                 font-size: 17px;
             }
         }
+
+        .wishlist-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.96);
+            color: #fff;
+            min-width: 280px;
+            max-width: calc(100vw - 32px);
+            padding: 14px 18px;
+            border-radius: 14px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wishlist-toast-thumb {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #fff;
+        }
+
+        .wishlist-toast-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .wishlist-toast-text {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
     </style>
 
     <div
@@ -321,13 +365,13 @@
             totalProducts: {{ $products->count() }},
             visibleCount: 0,
             columns: 2,
+            wishlist: @js(array_map('intval', $wishlistIds)),
+            toastOpen: false,
+            toastMessage: '',
+            toastImage: '',
 
             detectColumns() {
-                if (window.innerWidth >= 1024) {
-                    this.columns = 4;
-                } else {
-                    this.columns = 2;
-                }
+                this.columns = window.innerWidth >= 1024 ? 4 : 2;
             },
 
             get initialRows() {
@@ -363,6 +407,66 @@
 
             showMore() {
                 this.visibleCount = Math.min(this.visibleCount + this.loadStep, this.totalProducts);
+            },
+
+            isInWishlist(id) {
+                return this.wishlist.includes(parseInt(id));
+            },
+
+            showToast(message, image = '') {
+                this.toastMessage = message;
+                this.toastImage = image;
+                this.toastOpen = true;
+
+                clearTimeout(this.toastTimer);
+                this.toastTimer = setTimeout(() => {
+                    this.toastOpen = false;
+                }, 2200);
+            },
+
+            async toggleWishlist(productId, storeUrl, destroyUrl, image = '') {
+                productId = parseInt(productId);
+                const alreadyInWishlist = this.isInWishlist(productId);
+                const url = alreadyInWishlist ? destroyUrl : storeUrl;
+                const method = alreadyInWishlist ? 'DELETE' : 'POST';
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const text = await response.text();
+                    let data = {};
+
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Invalid JSON response: ' + text);
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Request failed');
+                    }
+
+                    if (data.action === 'added') {
+                        if (!this.isInWishlist(productId)) {
+                            this.wishlist.push(productId);
+                        }
+                        this.showToast(data.message || 'Item added to favourites', image);
+                    } else if (data.action === 'removed') {
+                        this.wishlist = this.wishlist.filter(id => id !== productId);
+                        this.showToast(data.message || 'Item removed from favourites', image);
+                    }
+                } catch (error) {
+                    console.error('Wishlist AJAX error:', error);
+                    this.showToast('Something went wrong');
+                }
             }
         }"
         x-init="initGrid()"
@@ -376,12 +480,6 @@
             </p>
         </div>
 
-        @if (session('success'))
-            <div class="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
         @if ($products->count())
             <div class="products-grid">
                 @foreach ($products as $index => $product)
@@ -389,7 +487,9 @@
                         $firstMedia = $product->firstMedia;
                         $hasDiscount = (float) $product->actual_price > (float) $product->discounted_price;
                         $discount = rtrim(rtrim(number_format((float) $product->discount_percentage, 2), '0'), '.');
-                        $inWishlist = in_array($product->id, $wishlistIds);
+                        $thumbImage = $firstMedia && $firstMedia->file_type === 'image'
+                            ? asset('storage/' . $firstMedia->file_path)
+                            : '';
                     @endphp
 
                     <div x-show="{{ $index }} < visibleCount" x-transition x-cloak class="group product-card-wrap">
@@ -404,13 +504,9 @@
                                                 class="product-image"
                                             >
                                         @elseif ($firstMedia && $firstMedia->file_type === 'video')
-                                            <div class="product-video">
-                                                Video Preview
-                                            </div>
+                                            <div class="product-video">Video Preview</div>
                                         @else
-                                            <div class="product-empty">
-                                                No Image
-                                            </div>
+                                            <div class="product-empty">No Image</div>
                                         @endif
                                     </div>
                                 </a>
@@ -421,20 +517,34 @@
                                     </div>
                                 @endif
 
-                                <form action="{{ route('users.wishlist.store', $product) }}" method="POST" class="wishlist-btn-form">
-                                    @csrf
-                                    <button type="submit" class="wishlist-btn" title="Add to Wishlist">
+                                <div class="wishlist-btn-form">
+                                    <button
+                                        type="button"
+                                        class="wishlist-btn"
+                                        :class="{ 'active': isInWishlist({{ $product->id }}) }"
+                                        @click.prevent="toggleWishlist(
+                                            {{ $product->id }},
+                                            '{{ route('users.wishlist.store', $product) }}',
+                                            '{{ route('users.wishlist.destroy', $product) }}',
+                                            '{{ $thumbImage }}'
+                                        )"
+                                        title="Wishlist"
+                                    >
                                         <svg
                                             class="wishlist-icon"
-                                            fill="{{ $inWishlist ? 'currentColor' : 'none' }}"
+                                            :fill="isInWishlist({{ $product->id }}) ? 'currentColor' : 'none'"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
                                         >
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"/>
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"
+                                            />
                                         </svg>
                                     </button>
-                                </form>
+                                </div>
                             </div>
 
                             <div class="product-meta">
@@ -486,5 +596,14 @@
                 No products found.
             </div>
         @endif
+
+        <div class="wishlist-toast" x-show="toastOpen" x-transition.opacity.duration.250ms x-cloak>
+            <template x-if="toastImage">
+                <div class="wishlist-toast-thumb">
+                    <img :src="toastImage" alt="Wishlist item">
+                </div>
+            </template>
+            <div class="wishlist-toast-text" x-text="toastMessage"></div>
+        </div>
     </div>
 @endsection

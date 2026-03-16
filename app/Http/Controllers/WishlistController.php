@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Http\Request;
 
 class WishlistController extends Controller
 {
@@ -24,7 +25,7 @@ class WishlistController extends Controller
         return view('users.wishlist', compact('categories', 'products'));
     }
 
-    public function store(Product $product)
+    public function store(Request $request, Product $product)
     {
         $wishlist = session()->get('wishlist', []);
 
@@ -33,10 +34,20 @@ class WishlistController extends Controller
             session()->put('wishlist', $wishlist);
         }
 
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'action' => 'added',
+                'message' => 'Item added to favourites',
+                'product_id' => $product->id,
+                'wishlist' => $wishlist,
+            ]);
+        }
+
         return back()->with('success', 'Product added to wishlist.');
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
         $wishlist = session()->get('wishlist', []);
 
@@ -45,6 +56,16 @@ class WishlistController extends Controller
         }));
 
         session()->put('wishlist', $wishlist);
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'action' => 'removed',
+                'message' => 'Item removed from favourites',
+                'product_id' => $product->id,
+                'wishlist' => $wishlist,
+            ]);
+        }
 
         return back()->with('success', 'Product removed from wishlist.');
     }
