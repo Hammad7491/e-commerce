@@ -68,8 +68,20 @@
                         <input type="text" id="product_slug" name="slug" value="{{ old('slug', $product->slug ?? '') }}"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 outline-none focus:border-black"
                             placeholder="Auto generated" readonly>
-                        <p class="mt-2 text-xs text-gray-500">Used in product URL (example: fancy-summer-dress)</p>
+                        <p class="mt-2 text-xs text-gray-500">Used in product URL example fancy-summer-dress</p>
                     </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                    <textarea
+                        name="description"
+                        rows="5"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black resize-none"
+                        placeholder="Enter product description">{{ old('description', $product->description ?? '') }}</textarea>
+                    @error('description')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
 
@@ -117,7 +129,7 @@
                     <input type="file" name="media[]" multiple accept="image/*,video/*"
                         class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black bg-white">
                     <p class="mt-2 text-sm text-gray-500">
-                        You can upload up to 8 files total. Images and videos can be combined. (Max 100MB per file)
+                        You can upload up to 8 files total. Images and videos can be combined. Max 100MB per file
                         @if (isset($product) && $product->media->count())
                             <br><span class="text-gray-600">Uploading new files will replace existing media.</span>
                         @endif
@@ -138,7 +150,7 @@
 
                 <div class="grid md:grid-cols-4 gap-6">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Small (S) Stock</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Small S Stock</label>
                         <input type="number" min="0" name="small_stock" value="{{ old('small_stock', $product->small_stock ?? 0) }}"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black">
                         @error('small_stock')
@@ -147,7 +159,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Medium (M) Stock</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Medium M Stock</label>
                         <input type="number" min="0" name="medium_stock" value="{{ old('medium_stock', $product->medium_stock ?? 0) }}"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black">
                         @error('medium_stock')
@@ -156,7 +168,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Large (L) Stock</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Large L Stock</label>
                         <input type="number" min="0" name="large_stock" value="{{ old('large_stock', $product->large_stock ?? 0) }}"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black">
                         @error('large_stock')
@@ -195,7 +207,7 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Product ID</label>
                         <input type="text" name="product_code" value="{{ old('product_code', $product->product_code ?? '') }}"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black"
-                            placeholder="Example: ZKP1107">
+                            placeholder="Example ZKP1107">
                     </div>
 
                     <div>
@@ -208,7 +220,7 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Number Of Pieces</label>
                         <input type="text" name="number_of_pieces" value="{{ old('number_of_pieces', $product->number_of_pieces ?? '') }}"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:border-black"
-                            placeholder="Example: 2 piece - top & bottom">
+                            placeholder="Example 2 piece top and bottom">
                     </div>
 
                     <div>
@@ -284,8 +296,8 @@
                 }
             }
 
-            actualPriceInput.addEventListener('input', updateDiscountPreview);
-            discountedPriceInput.addEventListener('input', updateDiscountPreview);
+            actualPriceInput?.addEventListener('input', updateDiscountPreview);
+            discountedPriceInput?.addEventListener('input', updateDiscountPreview);
             updateDiscountPreview();
 
             function updateSlugPreview() {

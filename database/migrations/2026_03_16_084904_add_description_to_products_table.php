@@ -9,16 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->string('slug')->nullable()->unique()->after('name');
+            $table->longText('description')->nullable()->after('name');
         });
     }
 
     public function down(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->dropUnique(['slug']);
-            $table->dropColumn('slug');
+            $table->dropColumn('description');
         });
     }
 };
-

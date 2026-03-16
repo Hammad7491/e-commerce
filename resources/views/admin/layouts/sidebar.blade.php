@@ -62,6 +62,7 @@
                 </a>
             </li>
 
+
             <li>
                 <a href="{{ route('profile.edit') }}"
                     class="flex items-center space-x-3 px-4 py-3 rounded-lg {{ request()->routeIs('profile.*') ? 'bg-black text-white' : 'text-gray-700 hover:bg-white' }} transition-all duration-150">

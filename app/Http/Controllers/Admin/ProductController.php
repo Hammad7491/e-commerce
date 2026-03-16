@@ -68,6 +68,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'category_id' => ['required', 'exists:categories,id'],
             'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
             'actual_price' => ['required', 'numeric', 'min:0'],
             'discounted_price' => ['required', 'numeric', 'min:0'],
 
@@ -113,6 +114,7 @@ class ProductController extends Controller
             $product = Product::create([
                 'category_id' => $validated['category_id'],
                 'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
                 'slug' => $slug,
                 'actual_price' => $actualPrice,
                 'discounted_price' => $discountedPrice,
@@ -170,6 +172,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'category_id' => ['required', 'exists:categories,id'],
             'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
             'actual_price' => ['required', 'numeric', 'min:0'],
             'discounted_price' => ['required', 'numeric', 'min:0'],
 
@@ -215,6 +218,7 @@ class ProductController extends Controller
             $product->update([
                 'category_id' => $validated['category_id'],
                 'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
                 'slug' => $slug,
                 'actual_price' => $actualPrice,
                 'discounted_price' => $discountedPrice,
@@ -281,6 +285,13 @@ class ProductController extends Controller
     public function bulkDestroy(Request $request)
     {
         $ids = $request->input('ids', []);
+
+        if (is_string($ids)) {
+            $decoded = json_decode($ids, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $ids = $decoded;
+            }
+        }
 
         if (!is_array($ids) || empty($ids)) {
             return redirect()

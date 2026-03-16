@@ -45,15 +45,14 @@
                 <span class="text-sm font-semibold">Back</span>
             </a>
 
-            <button type="button"
-                class="inline-flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 text-gray-400 rounded-xl shadow-sm cursor-not-allowed"
-                title="Edit can be enabled once update routes are added.">
+            <a href="{{ route('admin.products.edit', $product) }}"
+                class="inline-flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 text-gray-800 rounded-xl hover:bg-gray-50 shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 <span class="text-sm font-semibold">Edit</span>
-            </button>
+            </a>
         </div>
     </div>
 
@@ -63,7 +62,7 @@
                 <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                     <div>
                         <h2 class="text-lg font-extrabold text-gray-900">Media Gallery</h2>
-                        <p class="text-sm text-gray-600 mt-1">Images & videos attached to this product</p>
+                        <p class="text-sm text-gray-600 mt-1">Images and videos attached to this product</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center px-3 py-1 rounded-xl bg-primary-100 text-primary-700 text-xs font-extrabold">
@@ -185,15 +184,15 @@
 
                 <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Small (S)</p>
+                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Small S</p>
                         <p class="text-2xl font-extrabold text-gray-900 mt-2">{{ (int) $product->small_stock }}</p>
                     </div>
                     <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Medium (M)</p>
+                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Medium M</p>
                         <p class="text-2xl font-extrabold text-gray-900 mt-2">{{ (int) $product->medium_stock }}</p>
                     </div>
                     <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Large (L)</p>
+                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Large L</p>
                         <p class="text-2xl font-extrabold text-gray-900 mt-2">{{ (int) $product->large_stock }}</p>
                     </div>
                     <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -209,7 +208,14 @@
                     <p class="text-sm text-gray-600 mt-1">All information from your product schema</p>
                 </div>
 
-                <div class="p-6">
+                <div class="p-6 space-y-4">
+                    <div class="rounded-2xl border border-gray-200 bg-white p-4">
+                        <p class="text-xs font-extrabold tracking-wider text-gray-600 uppercase">Description</p>
+                        <div class="text-sm font-medium text-gray-900 mt-2 whitespace-pre-line">
+                            {{ $product->description ?: '—' }}
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @php
                             $fields = [
@@ -257,4 +263,3 @@
         </script>
     @endpush
 @endsection
-
