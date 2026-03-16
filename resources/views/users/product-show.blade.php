@@ -4,6 +4,9 @@
 
 @section('content')
     @php
+        $wishlistIds = session()->get('wishlist', []);
+        $inWishlist = in_array($product->id, $wishlistIds);
+
         $media = $product->media ?? collect();
 
         $allMedia = $media->values()->map(function ($item) {
@@ -230,6 +233,10 @@
             flex-shrink: 0;
         }
 
+        .wishlist-form {
+            margin: 0;
+        }
+
         .circle-icon-btn {
             width: 48px;
             height: 48px;
@@ -241,6 +248,7 @@
             justify-content: center;
             color: #111827;
             transition: all 0.2s ease;
+            cursor: pointer;
         }
 
         .circle-icon-btn:hover {
@@ -645,25 +653,17 @@
                 const stock = parseInt(this.sizeStockMap[size] || 0);
                 if (stock <= 0) return;
                 this.selectedSize = size;
-                if (this.qty > stock) {
-                    this.qty = stock;
-                }
-                if (this.qty < 1) {
-                    this.qty = 1;
-                }
+                if (this.qty > stock) this.qty = stock;
+                if (this.qty < 1) this.qty = 1;
             },
 
             increaseQty() {
                 if (!this.selectedSize) return;
-                if (this.qty < this.currentStock) {
-                    this.qty++;
-                }
+                if (this.qty < this.currentStock) this.qty++;
             },
 
             decreaseQty() {
-                if (this.qty > 1) {
-                    this.qty--;
-                }
+                if (this.qty > 1) this.qty--;
             },
 
             get totalPrice() {
@@ -762,6 +762,12 @@
             </div>
 
             <div class="product-side">
+                @if (session('success'))
+                    <div class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-700">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
                 <div class="product-header">
                     <div>
                         <h1 class="product-name">{{ $product->name }}</h1>
@@ -769,12 +775,15 @@
                     </div>
 
                     <div class="top-action-icons">
-                        <button type="button" class="circle-icon-btn" title="Wishlist">
-                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                    d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"/>
-                            </svg>
-                        </button>
+                        <form action="{{ route('users.wishlist.store', $product) }}" method="POST" class="wishlist-form">
+                            @csrf
+                            <button type="submit" class="circle-icon-btn" title="Wishlist">
+                                <svg width="22" height="22" fill="{{ $inWishlist ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"/>
+                                </svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
 

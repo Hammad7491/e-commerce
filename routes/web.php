@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WishlistController;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
@@ -52,11 +53,9 @@ Route::get('/orders', function () {
     return view('users.orders', compact('categories'));
 })->name('users.orders');
 
-Route::get('/wishlist', function () {
-    $categories = Category::orderBy('name')->get();
-
-    return view('users.wishlist', compact('categories'));
-})->name('users.wishlist');
+Route::get('/wishlist', [WishlistController::class, 'index'])->name('users.wishlist');
+Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('users.wishlist.store');
+Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->name('users.wishlist.destroy');
 
 Route::get('/contact-us', function () {
     $categories = Category::orderBy('name')->get();
@@ -88,11 +87,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
             'update',
             'destroy'
         ]);
-        Route::resource('notifications', AdminNotificationController::class)->only([
-            'index',
-            'create',
-            'store'
-        ]);
+      
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

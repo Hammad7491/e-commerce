@@ -3,6 +3,10 @@
 @section('title', 'Home')
 
 @section('content')
+    @php
+        $wishlistIds = session()->get('wishlist', []);
+    @endphp
+
     <style>
         [x-cloak] {
             display: none !important;
@@ -139,16 +143,24 @@
             }
         }
 
-        .wishlist-btn {
+        .wishlist-btn-form {
             position: absolute;
             top: 0.5rem;
             right: 0.5rem;
+            z-index: 10;
+            margin: 0;
+        }
+
+        .wishlist-btn {
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
             transition: transform 0.2s ease;
-            z-index: 10;
+            background: transparent;
+            border: 0;
+            padding: 0;
+            cursor: pointer;
         }
 
         .wishlist-btn:hover {
@@ -364,6 +376,12 @@
             </p>
         </div>
 
+        @if (session('success'))
+            <div class="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-700">
+                {{ session('success') }}
+            </div>
+        @endif
+
         @if ($products->count())
             <div class="products-grid">
                 @foreach ($products as $index => $product)
@@ -371,6 +389,7 @@
                         $firstMedia = $product->firstMedia;
                         $hasDiscount = (float) $product->actual_price > (float) $product->discounted_price;
                         $discount = rtrim(rtrim(number_format((float) $product->discount_percentage, 2), '0'), '.');
+                        $inWishlist = in_array($product->id, $wishlistIds);
                     @endphp
 
                     <div x-show="{{ $index }} < visibleCount" x-transition x-cloak class="group product-card-wrap">
@@ -402,12 +421,20 @@
                                     </div>
                                 @endif
 
-                                <button type="button" class="wishlist-btn">
-                                    <svg class="wishlist-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                    </svg>
-                                </button>
+                                <form action="{{ route('users.wishlist.store', $product) }}" method="POST" class="wishlist-btn-form">
+                                    @csrf
+                                    <button type="submit" class="wishlist-btn" title="Add to Wishlist">
+                                        <svg
+                                            class="wishlist-icon"
+                                            fill="{{ $inWishlist ? 'currentColor' : 'none' }}"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"/>
+                                        </svg>
+                                    </button>
+                                </form>
                             </div>
 
                             <div class="product-meta">
@@ -435,7 +462,7 @@
                                     <button type="button" class="cart-btn">
                                         <svg class="cart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.2 1.6a1 1 0 00.8 1.4H19m-9 4a1 1 0 100 2 1 1 0 000-2zm9 0a1 1 0 100 2 1 1 0 000-2z" />
+                                                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.2 1.6a1 1 0 0 0 .8 1.4H19m-9 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
                                         </svg>
                                     </button>
                                 </div>
