@@ -49,9 +49,20 @@
             'L' => (int) $product->large_stock,
             'XL' => (int) $product->xl_stock,
         ];
+
+        $firstToastImage = $product->firstMedia && $product->firstMedia->file_type === 'image'
+            ? asset('storage/' . $product->firstMedia->file_path)
+            : '';
+
+        $wishlistStoreUrl = route('users.wishlist.store', $product);
+        $wishlistDestroyUrl = route('users.wishlist.destroy', $product);
     @endphp
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         .product-show-page {
             padding: 22px 14px 46px;
         }
@@ -233,10 +244,6 @@
             flex-shrink: 0;
         }
 
-        .wishlist-form {
-            margin: 0;
-        }
-
         .circle-icon-btn {
             width: 48px;
             height: 48px;
@@ -251,9 +258,19 @@
             cursor: pointer;
         }
 
+        .circle-icon-btn.active {
+            color: #ef4444;
+            border-color: #fecaca;
+            background: #fff5f5;
+        }
+
         .circle-icon-btn:hover {
             background: #f9fafb;
             transform: translateY(-1px);
+        }
+
+        .circle-icon-btn.active:hover {
+            background: #ffecec;
         }
 
         .price-block {
@@ -551,6 +568,46 @@
             }
         }
 
+        .wishlist-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.96);
+            color: #fff;
+            min-width: 280px;
+            max-width: calc(100vw - 32px);
+            padding: 14px 18px;
+            border-radius: 14px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wishlist-toast-thumb {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #fff;
+        }
+
+        .wishlist-toast-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .wishlist-toast-text {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
         @media (max-width: 767px) {
             .gallery-block {
                 grid-template-columns: 1fr;
@@ -606,80 +663,8 @@
 
     <div
         class="product-show-page"
-        x-data='{
-            mediaItems: @json($allMedia->values()),
-            sizeStockMap: @json($sizes),
-            activeIndex: 0,
-            qty: 1,
-            selectedSize: "",
-            direction: "right",
-            animationClass: "slide-enter-right",
-            unitPrice: {{ $discountedPrice }},
-
-            init() {
-                this.selectedSize = "";
-            },
-
-            get activeItem() {
-                return this.mediaItems[this.activeIndex] ?? null;
-            },
-
-            setMedia(index) {
-                this.direction = index > this.activeIndex ? "right" : "left";
-                this.animationClass = this.direction === "right" ? "slide-enter-right" : "slide-enter-left";
-                this.activeIndex = index;
-            },
-
-            nextMedia() {
-                if (!this.mediaItems.length) return;
-                this.direction = "right";
-                this.animationClass = "slide-enter-right";
-                this.activeIndex = (this.activeIndex + 1) % this.mediaItems.length;
-            },
-
-            prevMedia() {
-                if (!this.mediaItems.length) return;
-                this.direction = "left";
-                this.animationClass = "slide-enter-left";
-                this.activeIndex = (this.activeIndex - 1 + this.mediaItems.length) % this.mediaItems.length;
-            },
-
-            get currentStock() {
-                if (!this.selectedSize) return 0;
-                return parseInt(this.sizeStockMap[this.selectedSize] || 0);
-            },
-
-            selectSize(size) {
-                const stock = parseInt(this.sizeStockMap[size] || 0);
-                if (stock <= 0) return;
-                this.selectedSize = size;
-                if (this.qty > stock) this.qty = stock;
-                if (this.qty < 1) this.qty = 1;
-            },
-
-            increaseQty() {
-                if (!this.selectedSize) return;
-                if (this.qty < this.currentStock) this.qty++;
-            },
-
-            decreaseQty() {
-                if (this.qty > 1) this.qty--;
-            },
-
-            get totalPrice() {
-                return this.unitPrice * this.qty;
-            },
-
-            formatPrice(value) {
-                return new Intl.NumberFormat("en-PK", {
-                    maximumFractionDigits: 0
-                }).format(value);
-            },
-
-            get canAddToBag() {
-                return this.selectedSize !== "" && this.currentStock > 0 && this.qty >= 1 && this.qty <= this.currentStock;
-            }
-        }'
+        x-data="productShowPageData()"
+        x-init="init()"
     >
         <div class="product-layout">
             <div>
@@ -709,6 +694,7 @@
                             class="media-nav-btn media-nav-prev"
                             @click="prevMedia()"
                             x-show="mediaItems.length > 1"
+                            x-cloak
                         >
                             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m15 5-7 7 7 7"/>
@@ -720,6 +706,7 @@
                             class="media-nav-btn media-nav-next"
                             @click="nextMedia()"
                             x-show="mediaItems.length > 1"
+                            x-cloak
                         >
                             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
@@ -728,13 +715,13 @@
 
                         <div class="main-media-frame">
                             <template x-if="activeItem && activeItem.type === 'image'">
-                                <div class="main-media-slide" :class="animationClass" :key="activeItem.src + '-' + activeIndex">
+                                <div class="main-media-slide" :class="animationClass">
                                     <img :src="activeItem.src" alt="{{ $product->name }}">
                                 </div>
                             </template>
 
                             <template x-if="activeItem && activeItem.type === 'video'">
-                                <div class="main-media-slide" :class="animationClass" :key="activeItem.src + '-' + activeIndex">
+                                <div class="main-media-slide" :class="animationClass">
                                     <video controls :src="activeItem.src"></video>
                                 </div>
                             </template>
@@ -762,12 +749,6 @@
             </div>
 
             <div class="product-side">
-                @if (session('success'))
-                    <div class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-700">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
                 <div class="product-header">
                     <div>
                         <h1 class="product-name">{{ $product->name }}</h1>
@@ -775,15 +756,28 @@
                     </div>
 
                     <div class="top-action-icons">
-                        <form action="{{ route('users.wishlist.store', $product) }}" method="POST" class="wishlist-form">
-                            @csrf
-                            <button type="submit" class="circle-icon-btn" title="Wishlist">
-                                <svg width="22" height="22" fill="{{ $inWishlist ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                        d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"/>
-                                </svg>
-                            </button>
-                        </form>
+                        <button
+                            type="button"
+                            class="circle-icon-btn"
+                            :class="{ 'active': isInWishlist(productId) }"
+                            @click.prevent="toggleWishlist()"
+                            title="Wishlist"
+                        >
+                            <svg
+                                width="22"
+                                height="22"
+                                :fill="isInWishlist(productId) ? 'currentColor' : 'none'"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z"
+                                />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -801,6 +795,7 @@
                         class="stock-note"
                         :class="currentStock > 0 && currentStock <= 3 ? 'low' : 'good'"
                         x-show="selectedSize"
+                        x-cloak
                     >
                         <span x-show="currentStock > 0">
                             <span x-text="currentStock"></span> left in stock for size <span x-text="selectedSize"></span>
@@ -855,7 +850,7 @@
                     <table class="details-table">
                         <tbody>
                             @foreach ($productDetails as $label => $value)
-                                @if(!empty($value))
+                                @if (!empty($value))
                                     <tr>
                                         <td>{{ $label }}</td>
                                         <td>{{ $value }}</td>
@@ -867,5 +862,170 @@
                 </div>
             </div>
         </div>
+
+        <div
+            class="wishlist-toast"
+            x-show="toastOpen"
+            x-transition.opacity.duration.250ms
+            x-cloak
+        >
+            <template x-if="toastImage">
+                <div class="wishlist-toast-thumb">
+                    <img :src="toastImage" alt="Wishlist item">
+                </div>
+            </template>
+
+            <div class="wishlist-toast-text" x-text="toastMessage"></div>
+        </div>
     </div>
+
+    <script>
+        function productShowPageData() {
+            return {
+                mediaItems: @json($allMedia->values()),
+                sizeStockMap: @json($sizes),
+                activeIndex: 0,
+                qty: 1,
+                selectedSize: '',
+                direction: 'right',
+                animationClass: 'slide-enter-right',
+                unitPrice: {{ $discountedPrice }},
+                wishlist: @json(array_map('intval', $wishlistIds)),
+                toastOpen: false,
+                toastMessage: '',
+                toastImage: @json($firstToastImage),
+                productId: {{ (int) $product->id }},
+                storeUrl: @json($wishlistStoreUrl),
+                destroyUrl: @json($wishlistDestroyUrl),
+
+                init() {
+                    this.selectedSize = '';
+                },
+
+                get activeItem() {
+                    return this.mediaItems[this.activeIndex] ?? null;
+                },
+
+                setMedia(index) {
+                    this.direction = index > this.activeIndex ? 'right' : 'left';
+                    this.animationClass = this.direction === 'right' ? 'slide-enter-right' : 'slide-enter-left';
+                    this.activeIndex = index;
+                },
+
+                nextMedia() {
+                    if (!this.mediaItems.length) return;
+                    this.direction = 'right';
+                    this.animationClass = 'slide-enter-right';
+                    this.activeIndex = (this.activeIndex + 1) % this.mediaItems.length;
+                },
+
+                prevMedia() {
+                    if (!this.mediaItems.length) return;
+                    this.direction = 'left';
+                    this.animationClass = 'slide-enter-left';
+                    this.activeIndex = (this.activeIndex - 1 + this.mediaItems.length) % this.mediaItems.length;
+                },
+
+                get currentStock() {
+                    if (!this.selectedSize) return 0;
+                    return parseInt(this.sizeStockMap[this.selectedSize] || 0);
+                },
+
+                selectSize(size) {
+                    const stock = parseInt(this.sizeStockMap[size] || 0);
+                    if (stock <= 0) return;
+
+                    this.selectedSize = size;
+
+                    if (this.qty > stock) this.qty = stock;
+                    if (this.qty < 1) this.qty = 1;
+                },
+
+                increaseQty() {
+                    if (!this.selectedSize) return;
+                    if (this.qty < this.currentStock) this.qty++;
+                },
+
+                decreaseQty() {
+                    if (this.qty > 1) this.qty--;
+                },
+
+                get totalPrice() {
+                    return this.unitPrice * this.qty;
+                },
+
+                formatPrice(value) {
+                    return new Intl.NumberFormat('en-PK', {
+                        maximumFractionDigits: 0
+                    }).format(value);
+                },
+
+                get canAddToBag() {
+                    return this.selectedSize !== '' &&
+                        this.currentStock > 0 &&
+                        this.qty >= 1 &&
+                        this.qty <= this.currentStock;
+                },
+
+                isInWishlist(id) {
+                    return this.wishlist.includes(parseInt(id));
+                },
+
+                showToast(message, image = '') {
+                    this.toastMessage = message;
+                    this.toastImage = image;
+                    this.toastOpen = true;
+
+                    clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => {
+                        this.toastOpen = false;
+                    }, 2200);
+                },
+
+                async toggleWishlist() {
+                    const alreadyInWishlist = this.isInWishlist(this.productId);
+                    const url = alreadyInWishlist ? this.destroyUrl : this.storeUrl;
+                    const method = alreadyInWishlist ? 'DELETE' : 'POST';
+
+                    try {
+                        const response = await fetch(url, {
+                            method: method,
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        const contentType = response.headers.get('content-type') || '';
+
+                        if (!contentType.includes('application/json')) {
+                            const text = await response.text();
+                            console.error('Non JSON response:', text);
+                            throw new Error('Server did not return JSON');
+                        }
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Request failed');
+                        }
+
+                        if (data.action === 'added') {
+                            if (!this.isInWishlist(this.productId)) {
+                                this.wishlist.push(this.productId);
+                            }
+                            this.showToast(data.message || 'Item added to favourites', this.toastImage);
+                        } else if (data.action === 'removed') {
+                            this.wishlist = this.wishlist.filter(id => id !== this.productId);
+                            this.showToast(data.message || 'Item removed from favourites', this.toastImage);
+                        }
+                    } catch (error) {
+                        console.error('Wishlist AJAX error:', error);
+                        this.showToast('Something went wrong', this.toastImage);
+                    }
+                }
+            };
+        }
+    </script>
 @endsection
