@@ -21,7 +21,7 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-4 py-6" x-data="{ womenOpen: true, clothingOpen: true }">
+        <div class="flex-1 overflow-y-auto px-4 py-6" x-data="{ womenOpen: true }">
             <nav class="space-y-2">
                 <a href="{{ route('home') }}"
                     class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200
@@ -45,48 +45,33 @@
                 </button>
 
                 <div x-show="womenOpen" x-transition class="pl-2 space-y-2" style="display: none;">
-                    <button
-                        type="button"
-                        @click="clothingOpen = !clothingOpen"
-                        class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium tracking-[0.1px] transition duration-200"
-                        :class="clothingOpen ? 'bg-gray-50 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-black'"
-                    >
+                    <a href="{{ route('users.clothing') }}"
+                        class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium tracking-[0.1px] transition duration-200
+                        {{ request()->routeIs('users.clothing') ? 'bg-black text-white shadow-sm' : 'bg-gray-50 text-gray-900 hover:bg-gray-100' }}">
                         <span>Clothing</span>
-                        <svg class="w-4 h-4 transition-transform duration-200 text-gray-500"
-                            :class="clothingOpen ? 'rotate-180' : ''"
+                        <svg class="w-4 h-4 {{ request()->routeIs('users.clothing') ? 'text-white' : 'text-gray-500' }}"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                d="M19 9l-7 7-7-7" />
+                                d="M9 5l7 7-7 7" />
                         </svg>
-                    </button>
-
-                    <div x-show="clothingOpen" x-transition class="pl-2 space-y-1.5" style="display: none;">
-                        @forelse ($categories as $cat)
-                            <a href="{{ route('users.category', $cat) }}"
-                                class="block px-3 py-2 rounded-lg text-[13px] font-normal tracking-[0.1px] transition duration-200
-                                {{ request()->routeIs('users.category') && optional(request()->route('category'))->id === $cat->id
-                                    ? 'bg-black text-white shadow-sm font-medium'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                                {{ $cat->name }}
-                            </a>
-                        @empty
-                            <p class="px-3 py-2 text-sm font-normal text-gray-400">No categories found.</p>
-                        @endforelse
-                    </div>
+                    </a>
                 </div>
 
                 <a href="{{ route('users.orders') }}"
-                    class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200 text-gray-700 hover:bg-gray-50 hover:text-black">
+                    class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200
+                    {{ request()->routeIs('users.orders') ? 'bg-gray-100 text-gray-900 shadow-sm' : 'text-gray-700 hover:bg-gray-50 hover:text-black' }}">
                     Orders
                 </a>
 
                 <a href="{{ route('users.wishlist') }}"
-                    class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200 text-gray-700 hover:bg-gray-50 hover:text-black">
+                    class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200
+                    {{ request()->routeIs('users.wishlist') ? 'bg-gray-100 text-gray-900 shadow-sm' : 'text-gray-700 hover:bg-gray-50 hover:text-black' }}">
                     Wishlist
                 </a>
 
                 <a href="{{ route('users.contact') }}"
-                    class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200 text-gray-700 hover:bg-gray-50 hover:text-black">
+                    class="block px-3 py-2.5 rounded-xl text-[14px] font-medium tracking-[0.1px] transition duration-200
+                    {{ request()->routeIs('users.contact') ? 'bg-gray-100 text-gray-900 shadow-sm' : 'text-gray-700 hover:bg-gray-50 hover:text-black' }}">
                     Contact Us
                 </a>
             </nav>

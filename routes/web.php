@@ -95,4 +95,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+
+Route::get('/clothing', function () {
+    $categories = \App\Models\Category::orderBy('name')->get();
+
+    $products = \App\Models\Product::with(['category', 'firstMedia'])
+        ->latest()
+        ->get();
+
+    return view('users.clothing', compact('categories', 'products'));
+})->name('users.clothing');
+
 require __DIR__ . '/auth.php';
