@@ -106,4 +106,7 @@ Route::get('/clothing', function () {
     return view('users.clothing', compact('categories', 'products'));
 })->name('users.clothing');
 
+
+Route::post('/cart/add/{product}', [CartController::class, 'store'])
+    ->name('users.cart.store');
 require __DIR__ . '/auth.php';

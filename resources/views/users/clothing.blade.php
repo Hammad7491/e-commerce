@@ -7,7 +7,20 @@
         $wishlistIds = session()->get('wishlist', []);
 
         $allProducts = $products->map(function ($product) use ($wishlistIds) {
+            $mediaItems = ($product->media ?? collect())
+                ->filter(fn ($item) => $item->file_type === 'image')
+                ->map(fn ($item) => asset('storage/' . $item->file_path))
+                ->values()
+                ->all();
+
             $firstMedia = $product->firstMedia;
+            $mainImage = $firstMedia && $firstMedia->file_type === 'image'
+                ? asset('storage/' . $firstMedia->file_path)
+                : 'https://placehold.co/600x750?text=No+Image';
+
+            if (empty($mediaItems)) {
+                $mediaItems = [$mainImage];
+            }
 
             return [
                 'id' => $product->id,
@@ -18,13 +31,31 @@
                 'actual_price' => (float) $product->actual_price,
                 'discounted_price' => (float) $product->discounted_price,
                 'discount_percentage' => (float) $product->discount_percentage,
-                'image' => $firstMedia && $firstMedia->file_type === 'image'
-                    ? asset('storage/' . $firstMedia->file_path)
-                    : 'https://placehold.co/600x750?text=No+Image',
+                'description' => $product->description,
+                'image' => $mainImage,
+                'images' => $mediaItems,
                 'product_url' => route('users.product', $product),
                 'wishlist_store_url' => route('users.wishlist.store', $product),
                 'wishlist_destroy_url' => route('users.wishlist.destroy', $product),
                 'in_wishlist' => in_array($product->id, $wishlistIds),
+                'sizes' => [
+                    'S' => (int) $product->small_stock,
+                    'M' => (int) $product->medium_stock,
+                    'L' => (int) $product->large_stock,
+                    'XL' => (int) $product->xl_stock,
+                ],
+                'details' => array_filter([
+                    'Bottom Style' => $product->bottom_style,
+                    'Color Type' => $product->color_type,
+                    'Product ID' => $product->product_code,
+                    'Lining Attached' => $product->lining_attached,
+                    'Number Of Pieces' => $product->number_of_pieces,
+                    'Product Type' => $product->product_type,
+                    'Season' => $product->season,
+                    'Shirt Fabric' => $product->shirt_fabric,
+                    'Top Style' => $product->top_style,
+                    'Trouser Fabrics' => $product->trouser_fabrics,
+                ], fn ($value) => !empty($value)),
             ];
         })->values();
 
@@ -528,7 +559,11 @@
                                             </div>
                                         </div>
 
-                                        <button type="button" class="cart-btn">
+                                        <button
+                                            type="button"
+                                            class="cart-btn"
+                                            @click="openQuickView(product)"
+                                        >
                                             <svg class="cart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.2 1.6a1 1 0 0 0 .8 1.4H19m-9 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
@@ -566,6 +601,8 @@
 
             <div class="wishlist-toast-text" x-text="toastMessage"></div>
         </div>
+
+        @include('users.partials.quick-view-modal')
     </div>
 
     <script>
@@ -583,6 +620,18 @@
                 products: @json($allProducts),
                 wishlist: @json(array_map('intval', $wishlistIds)),
 
+                quickView: {
+                    open: false,
+                    loading: false,
+                    product: null,
+                    activeImage: '',
+                    qty: 1,
+                    selectedSize: '',
+                    sizes: {},
+                    currentStock: 0,
+                    canAddToBag: false,
+                },
+
                 init() {
                     this.$nextTick(() => {
                         this.updateScrollButtons();
@@ -591,6 +640,102 @@
                             this.updateScrollButtons();
                         });
                     });
+                },
+
+                openQuickView(product) {
+                    this.quickView.open = true;
+                    this.quickView.loading = true;
+                    this.quickView.product = null;
+                    this.quickView.activeImage = '';
+                    this.quickView.qty = 1;
+                    this.quickView.selectedSize = '';
+                    this.quickView.sizes = {};
+                    this.quickView.currentStock = 0;
+                    this.quickView.canAddToBag = false;
+
+                    document.body.style.overflow = 'hidden';
+
+                    setTimeout(() => {
+                        this.quickView.product = product;
+                        this.quickView.activeImage = product.image || '';
+                        this.quickView.sizes = product.sizes || {};
+                        this.quickView.loading = false;
+                    }, 450);
+                },
+
+                closeQuickView() {
+                    this.quickView.open = false;
+                    this.quickView.loading = false;
+                    this.quickView.product = null;
+                    this.quickView.activeImage = '';
+                    this.quickView.qty = 1;
+                    this.quickView.selectedSize = '';
+                    this.quickView.sizes = {};
+                    this.quickView.currentStock = 0;
+                    this.quickView.canAddToBag = false;
+
+                    document.body.style.overflow = '';
+                },
+
+                selectQuickViewSize(size) {
+                    const stock = parseInt(this.quickView.sizes[size] || 0);
+                    if (stock <= 0) return;
+
+                    this.quickView.selectedSize = size;
+                    this.quickView.currentStock = stock;
+
+                    if (this.quickView.qty > stock) {
+                        this.quickView.qty = stock;
+                    }
+
+                    if (this.quickView.qty < 1) {
+                        this.quickView.qty = 1;
+                    }
+
+                    this.quickView.canAddToBag =
+                        this.quickView.selectedSize !== '' &&
+                        this.quickView.currentStock > 0 &&
+                        this.quickView.qty >= 1 &&
+                        this.quickView.qty <= this.quickView.currentStock;
+                },
+
+                increaseQuickViewQty() {
+                    if (!this.quickView.selectedSize) return;
+
+                    if (this.quickView.qty < this.quickView.currentStock) {
+                        this.quickView.qty++;
+                    }
+
+                    this.quickView.canAddToBag =
+                        this.quickView.selectedSize !== '' &&
+                        this.quickView.currentStock > 0 &&
+                        this.quickView.qty >= 1 &&
+                        this.quickView.qty <= this.quickView.currentStock;
+                },
+
+                decreaseQuickViewQty() {
+                    if (this.quickView.qty > 1) {
+                        this.quickView.qty--;
+                    }
+
+                    this.quickView.canAddToBag =
+                        this.quickView.selectedSize !== '' &&
+                        this.quickView.currentStock > 0 &&
+                        this.quickView.qty >= 1 &&
+                        this.quickView.qty <= this.quickView.currentStock;
+                },
+
+                addQuickViewToCart() {
+                    if (!this.quickView.canAddToBag) return;
+
+                    alert(
+                        'Added to bag:\n' +
+                        'Product: ' + this.quickView.product.name + '\n' +
+                        'Size: ' + this.quickView.selectedSize + '\n' +
+                        'Qty: ' + this.quickView.qty
+                    );
+
+                    this.closeQuickView();
                 },
 
                 changeCategory(categoryId, categoryName) {
@@ -723,3 +868,5 @@
         }
     </script>
 @endsection
+
+
