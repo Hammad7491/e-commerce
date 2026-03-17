@@ -605,268 +605,296 @@
         @include('users.partials.quick-view-modal')
     </div>
 
-    <script>
-        function clothingPageData() {
-            return {
-                activeCategory: {{ $firstCategory ? (int) $firstCategory->id : 'null' }},
-                activeCategoryName: @json($firstCategory?->name ?? 'Women Ready To Wear'),
-                isChanging: false,
-                toastOpen: false,
-                toastMessage: '',
-                toastImage: '',
-                canScrollLeft: false,
-                canScrollRight: false,
-                showArrows: false,
-                products: @json($allProducts),
-                wishlist: @json(array_map('intval', $wishlistIds)),
+   <script>
+    function clothingPageData() {
+        return {
+            activeCategory: {{ $firstCategory ? (int) $firstCategory->id : 'null' }},
+            activeCategoryName: @json($firstCategory?->name ?? 'Women Ready To Wear'),
+            isChanging: false,
+            toastOpen: false,
+            toastMessage: '',
+            toastImage: '',
+            canScrollLeft: false,
+            canScrollRight: false,
+            showArrows: false,
+            products: @json($allProducts),
+            wishlist: @json(array_map('intval', $wishlistIds)),
 
-                quickView: {
-                    open: false,
-                    loading: false,
-                    product: null,
-                    activeImage: '',
-                    qty: 1,
-                    selectedSize: '',
-                    sizes: {},
-                    currentStock: 0,
-                    canAddToBag: false,
-                },
+            quickView: {
+                open: false,
+                loading: false,
+                product: null,
+                activeImage: '',
+                activeImageIndex: 0,
+                qty: 1,
+                selectedSize: '',
+                sizes: {},
+                currentStock: 0,
+                canAddToBag: false,
+            },
 
-                init() {
-                    this.$nextTick(() => {
+            init() {
+                this.$nextTick(() => {
+                    this.updateScrollButtons();
+
+                    window.addEventListener('resize', () => {
                         this.updateScrollButtons();
-
-                        window.addEventListener('resize', () => {
-                            this.updateScrollButtons();
-                        });
                     });
-                },
+                });
+            },
 
-                openQuickView(product) {
-                    this.quickView.open = true;
-                    this.quickView.loading = true;
-                    this.quickView.product = null;
-                    this.quickView.activeImage = '';
-                    this.quickView.qty = 1;
-                    this.quickView.selectedSize = '';
-                    this.quickView.sizes = {};
-                    this.quickView.currentStock = 0;
-                    this.quickView.canAddToBag = false;
+            openQuickView(product) {
+                this.quickView.open = true;
+                this.quickView.loading = true;
+                this.quickView.product = null;
+                this.quickView.activeImage = '';
+                this.quickView.activeImageIndex = 0;
+                this.quickView.qty = 1;
+                this.quickView.selectedSize = '';
+                this.quickView.sizes = {};
+                this.quickView.currentStock = 0;
+                this.quickView.canAddToBag = false;
 
-                    document.body.style.overflow = 'hidden';
+                document.body.style.overflow = 'hidden';
 
-                    setTimeout(() => {
-                        this.quickView.product = product;
-                        this.quickView.activeImage = product.image || '';
-                        this.quickView.sizes = product.sizes || {};
-                        this.quickView.loading = false;
-                    }, 450);
-                },
-
-                closeQuickView() {
-                    this.quickView.open = false;
+                setTimeout(() => {
+                    this.quickView.product = product;
+                    this.quickView.activeImageIndex = 0;
+                    this.quickView.activeImage = (product.images && product.images.length) ? product.images[0] : (product.image || '');
+                    this.quickView.sizes = product.sizes || {};
                     this.quickView.loading = false;
-                    this.quickView.product = null;
-                    this.quickView.activeImage = '';
+                }, 450);
+            },
+
+            closeQuickView() {
+                this.quickView.open = false;
+                this.quickView.loading = false;
+                this.quickView.product = null;
+                this.quickView.activeImage = '';
+                this.quickView.activeImageIndex = 0;
+                this.quickView.qty = 1;
+                this.quickView.selectedSize = '';
+                this.quickView.sizes = {};
+                this.quickView.currentStock = 0;
+                this.quickView.canAddToBag = false;
+
+                document.body.style.overflow = '';
+            },
+
+            setQuickViewImage(index) {
+                if (!this.quickView.product || !this.quickView.product.images || !this.quickView.product.images.length) return;
+                this.quickView.activeImageIndex = index;
+                this.quickView.activeImage = this.quickView.product.images[index];
+            },
+
+            nextQuickViewImage() {
+                if (!this.quickView.product || !this.quickView.product.images || this.quickView.product.images.length <= 1) return;
+
+                this.quickView.activeImageIndex =
+                    (this.quickView.activeImageIndex + 1) % this.quickView.product.images.length;
+
+                this.quickView.activeImage = this.quickView.product.images[this.quickView.activeImageIndex];
+            },
+
+            prevQuickViewImage() {
+                if (!this.quickView.product || !this.quickView.product.images || this.quickView.product.images.length <= 1) return;
+
+                this.quickView.activeImageIndex =
+                    (this.quickView.activeImageIndex - 1 + this.quickView.product.images.length) % this.quickView.product.images.length;
+
+                this.quickView.activeImage = this.quickView.product.images[this.quickView.activeImageIndex];
+            },
+
+            selectQuickViewSize(size) {
+                const stock = parseInt(this.quickView.sizes[size] || 0);
+                if (stock <= 0) return;
+
+                this.quickView.selectedSize = size;
+                this.quickView.currentStock = stock;
+
+                if (this.quickView.qty > stock) {
+                    this.quickView.qty = stock;
+                }
+
+                if (this.quickView.qty < 1) {
                     this.quickView.qty = 1;
-                    this.quickView.selectedSize = '';
-                    this.quickView.sizes = {};
-                    this.quickView.currentStock = 0;
-                    this.quickView.canAddToBag = false;
+                }
 
-                    document.body.style.overflow = '';
-                },
+                this.quickView.canAddToBag =
+                    this.quickView.selectedSize !== '' &&
+                    this.quickView.currentStock > 0 &&
+                    this.quickView.qty >= 1 &&
+                    this.quickView.qty <= this.quickView.currentStock;
+            },
 
-                selectQuickViewSize(size) {
-                    const stock = parseInt(this.quickView.sizes[size] || 0);
-                    if (stock <= 0) return;
+            increaseQuickViewQty() {
+                if (!this.quickView.selectedSize) return;
 
-                    this.quickView.selectedSize = size;
-                    this.quickView.currentStock = stock;
+                if (this.quickView.qty < this.quickView.currentStock) {
+                    this.quickView.qty++;
+                }
 
-                    if (this.quickView.qty > stock) {
-                        this.quickView.qty = stock;
-                    }
+                this.quickView.canAddToBag =
+                    this.quickView.selectedSize !== '' &&
+                    this.quickView.currentStock > 0 &&
+                    this.quickView.qty >= 1 &&
+                    this.quickView.qty <= this.quickView.currentStock;
+            },
 
-                    if (this.quickView.qty < 1) {
-                        this.quickView.qty = 1;
-                    }
+            decreaseQuickViewQty() {
+                if (this.quickView.qty > 1) {
+                    this.quickView.qty--;
+                }
 
-                    this.quickView.canAddToBag =
-                        this.quickView.selectedSize !== '' &&
-                        this.quickView.currentStock > 0 &&
-                        this.quickView.qty >= 1 &&
-                        this.quickView.qty <= this.quickView.currentStock;
-                },
+                this.quickView.canAddToBag =
+                    this.quickView.selectedSize !== '' &&
+                    this.quickView.currentStock > 0 &&
+                    this.quickView.qty >= 1 &&
+                    this.quickView.qty <= this.quickView.currentStock;
+            },
 
-                increaseQuickViewQty() {
-                    if (!this.quickView.selectedSize) return;
+            addQuickViewToCart() {
+                if (!this.quickView.canAddToBag) return;
 
-                    if (this.quickView.qty < this.quickView.currentStock) {
-                        this.quickView.qty++;
-                    }
+                alert(
+                    'Added to bag:\n' +
+                    'Product: ' + this.quickView.product.name + '\n' +
+                    'Size: ' + this.quickView.selectedSize + '\n' +
+                    'Qty: ' + this.quickView.qty
+                );
 
-                    this.quickView.canAddToBag =
-                        this.quickView.selectedSize !== '' &&
-                        this.quickView.currentStock > 0 &&
-                        this.quickView.qty >= 1 &&
-                        this.quickView.qty <= this.quickView.currentStock;
-                },
+                this.closeQuickView();
+            },
 
-                decreaseQuickViewQty() {
-                    if (this.quickView.qty > 1) {
-                        this.quickView.qty--;
-                    }
+            changeCategory(categoryId, categoryName) {
+                if (this.activeCategory === categoryId) return;
 
-                    this.quickView.canAddToBag =
-                        this.quickView.selectedSize !== '' &&
-                        this.quickView.currentStock > 0 &&
-                        this.quickView.qty >= 1 &&
-                        this.quickView.qty <= this.quickView.currentStock;
-                },
+                this.isChanging = true;
 
-                addQuickViewToCart() {
-                    if (!this.quickView.canAddToBag) return;
+                setTimeout(() => {
+                    this.activeCategory = categoryId;
+                    this.activeCategoryName = categoryName;
+                    this.isChanging = false;
+                }, 140);
+            },
 
-                    alert(
-                        'Added to bag:\n' +
-                        'Product: ' + this.quickView.product.name + '\n' +
-                        'Size: ' + this.quickView.selectedSize + '\n' +
-                        'Qty: ' + this.quickView.qty
-                    );
+            get filteredProducts() {
+                if (!this.activeCategory) {
+                    return this.products;
+                }
 
-                    this.closeQuickView();
-                },
+                return this.products.filter(product => parseInt(product.category_id) === parseInt(this.activeCategory));
+            },
 
-                changeCategory(categoryId, categoryName) {
-                    if (this.activeCategory === categoryId) return;
+            get headingTitle() {
+                if (!this.activeCategoryName) {
+                    return 'Women Ready To Wear';
+                }
 
-                    this.isChanging = true;
+                const text = this.activeCategoryName;
+                return text.charAt(0).toUpperCase() + text.slice(1);
+            },
 
-                    setTimeout(() => {
-                        this.activeCategory = categoryId;
-                        this.activeCategoryName = categoryName;
-                        this.isChanging = false;
-                    }, 140);
-                },
+            formatPrice(value) {
+                return new Intl.NumberFormat('en-PK', {
+                    maximumFractionDigits: 0
+                }).format(value);
+            },
 
-                get filteredProducts() {
-                    if (!this.activeCategory) {
-                        return this.products;
-                    }
+            formatDiscount(value) {
+                const number = parseFloat(value || 0);
+                return number % 1 === 0
+                    ? number.toFixed(0)
+                    : number.toFixed(2).replace(/\.?0+$/, '');
+            },
 
-                    return this.products.filter(product => parseInt(product.category_id) === parseInt(this.activeCategory));
-                },
+            scrollCategories(direction) {
+                const strip = this.$refs.categoryStrip;
+                if (!strip) return;
 
-                get headingTitle() {
-                    if (!this.activeCategoryName) {
-                        return 'Women Ready To Wear';
-                    }
+                const amount = 240;
 
-                    const text = this.activeCategoryName;
-                    return text.charAt(0).toUpperCase() + text.slice(1);
-                },
+                strip.scrollBy({
+                    left: direction === 'right' ? amount : -amount,
+                    behavior: 'smooth'
+                });
 
-                formatPrice(value) {
-                    return new Intl.NumberFormat('en-PK', {
-                        maximumFractionDigits: 0
-                    }).format(value);
-                },
+                setTimeout(() => {
+                    this.updateScrollButtons();
+                }, 260);
+            },
 
-                formatDiscount(value) {
-                    const number = parseFloat(value || 0);
-                    return number % 1 === 0
-                        ? number.toFixed(0)
-                        : number.toFixed(2).replace(/\.?0+$/, '');
-                },
+            updateScrollButtons() {
+                const strip = this.$refs.categoryStrip;
+                if (!strip) return;
 
-                scrollCategories(direction) {
-                    const strip = this.$refs.categoryStrip;
-                    if (!strip) return;
+                this.showArrows = strip.scrollWidth > strip.clientWidth + 8;
+                this.canScrollLeft = strip.scrollLeft > 5;
+                this.canScrollRight = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 5;
+            },
 
-                    const amount = 240;
+            isInWishlist(id) {
+                return this.wishlist.includes(parseInt(id));
+            },
 
-                    strip.scrollBy({
-                        left: direction === 'right' ? amount : -amount,
-                        behavior: 'smooth'
+            showToast(message, image = '') {
+                this.toastMessage = message;
+                this.toastImage = image;
+                this.toastOpen = true;
+
+                clearTimeout(this.toastTimer);
+                this.toastTimer = setTimeout(() => {
+                    this.toastOpen = false;
+                }, 2200);
+            },
+
+            async toggleWishlist(product) {
+                const productId = parseInt(product.id);
+                const alreadyInWishlist = this.isInWishlist(productId);
+                const url = alreadyInWishlist ? product.wishlist_destroy_url : product.wishlist_store_url;
+                const method = alreadyInWishlist ? 'DELETE' : 'POST';
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
                     });
 
-                    setTimeout(() => {
-                        this.updateScrollButtons();
-                    }, 260);
-                },
+                    const contentType = response.headers.get('content-type') || '';
 
-                updateScrollButtons() {
-                    const strip = this.$refs.categoryStrip;
-                    if (!strip) return;
-
-                    this.showArrows = strip.scrollWidth > strip.clientWidth + 8;
-                    this.canScrollLeft = strip.scrollLeft > 5;
-                    this.canScrollRight = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 5;
-                },
-
-                isInWishlist(id) {
-                    return this.wishlist.includes(parseInt(id));
-                },
-
-                showToast(message, image = '') {
-                    this.toastMessage = message;
-                    this.toastImage = image;
-                    this.toastOpen = true;
-
-                    clearTimeout(this.toastTimer);
-                    this.toastTimer = setTimeout(() => {
-                        this.toastOpen = false;
-                    }, 2200);
-                },
-
-                async toggleWishlist(product) {
-                    const productId = parseInt(product.id);
-                    const alreadyInWishlist = this.isInWishlist(productId);
-                    const url = alreadyInWishlist ? product.wishlist_destroy_url : product.wishlist_store_url;
-                    const method = alreadyInWishlist ? 'DELETE' : 'POST';
-
-                    try {
-                        const response = await fetch(url, {
-                            method: method,
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json'
-                            }
-                        });
-
-                        const contentType = response.headers.get('content-type') || '';
-
-                        if (!contentType.includes('application/json')) {
-                            const text = await response.text();
-                            console.error('Non JSON response:', text);
-                            throw new Error('Server did not return JSON');
-                        }
-
-                        const data = await response.json();
-
-                        if (!response.ok) {
-                            throw new Error(data.message || 'Request failed');
-                        }
-
-                        if (data.action === 'added') {
-                            if (!this.isInWishlist(productId)) {
-                                this.wishlist.push(productId);
-                            }
-                            this.showToast(data.message || 'Item added to favourites', product.image);
-                        } else if (data.action === 'removed') {
-                            this.wishlist = this.wishlist.filter(id => id !== productId);
-                            this.showToast(data.message || 'Item removed from favourites', product.image);
-                        }
-                    } catch (error) {
-                        console.error('Wishlist AJAX error:', error);
-                        this.showToast('Something went wrong', product.image);
+                    if (!contentType.includes('application/json')) {
+                        const text = await response.text();
+                        console.error('Non JSON response:', text);
+                        throw new Error('Server did not return JSON');
                     }
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Request failed');
+                    }
+
+                    if (data.action === 'added') {
+                        if (!this.isInWishlist(productId)) {
+                            this.wishlist.push(productId);
+                        }
+                        this.showToast(data.message || 'Item added to favourites', product.image);
+                    } else if (data.action === 'removed') {
+                        this.wishlist = this.wishlist.filter(id => id !== productId);
+                        this.showToast(data.message || 'Item removed from favourites', product.image);
+                    }
+                } catch (error) {
+                    console.error('Wishlist AJAX error:', error);
+                    this.showToast('Something went wrong', product.image);
                 }
             }
         }
-    </script>
+    }
+</script>
 @endsection
 
 

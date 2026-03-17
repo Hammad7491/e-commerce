@@ -3,23 +3,12 @@
     x-show="quickView.open"
     x-transition.opacity
     @keydown.escape.window="closeQuickView()"
-    class="fixed inset-0 z-[9999]"
+    class="fixed inset-0 z-[9999] overflow-y-auto"
 >
     <div
         class="absolute inset-0 bg-black/55"
         @click="closeQuickView()"
     ></div>
-
-    <style>
-        .qv-scroll-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .qv-scroll-hide::-webkit-scrollbar {
-            display: none;
-        }
-    </style>
 
     <div class="absolute inset-0 overflow-y-auto qv-scroll-hide">
         <div class="min-h-full flex items-center justify-center p-3 md:p-5">
@@ -37,7 +26,6 @@
                     </svg>
                 </button>
 
-                {{-- Loading Skeleton --}}
                 <template x-if="quickView.loading">
                     <div class="p-5 md:p-7 animate-pulse">
                         <div class="space-y-3">
@@ -73,18 +61,40 @@
                     </div>
                 </template>
 
-                {{-- Loaded Content --}}
                 <template x-if="!quickView.loading && quickView.product">
                     <div class="grid grid-cols-1 lg:grid-cols-[1.38fr_1fr] min-h-[650px] max-h-[86vh]">
-                        {{-- Left side fixed image --}}
                         <div class="relative bg-[#f7f7f7] lg:sticky lg:top-0 self-start h-full">
-                            <div class="h-full min-h-[420px] lg:min-h-[86vh] max-h-[86vh] overflow-hidden">
+                            <div class="h-full min-h-[420px] lg:min-h-[86vh] max-h-[86vh] overflow-hidden relative">
                                 <template x-if="quickView.activeImage">
                                     <img
                                         :src="quickView.activeImage"
                                         :alt="quickView.product.name"
                                         class="w-full h-full object-cover"
                                     >
+                                </template>
+
+                                <template x-if="quickView.product.images && quickView.product.images.length > 1">
+                                    <div>
+                                        <button
+                                            type="button"
+                                            class="absolute left-4 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/92 border border-gray-200 text-gray-700 hover:bg-white transition shadow-sm"
+                                            @click="prevQuickViewImage()"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m15 19-7-7 7-7" />
+                                            </svg>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="absolute right-4 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/92 border border-gray-200 text-gray-700 hover:bg-white transition shadow-sm"
+                                            @click="nextQuickViewImage()"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </template>
                             </div>
 
@@ -95,7 +105,7 @@
                                             type="button"
                                             class="shrink-0 w-16 h-20 rounded-xl overflow-hidden border-2 bg-white"
                                             :class="quickView.activeImage === img ? 'border-black' : 'border-white/80'"
-                                            @click="quickView.activeImage = img"
+                                            @click="setQuickViewImage(index)"
                                         >
                                             <img :src="img" alt="" class="w-full h-full object-cover">
                                         </button>
@@ -104,9 +114,8 @@
                             </template>
                         </div>
 
-                        {{-- Right side scrollable content --}}
-                        <div class="max-h-[86vh] overflow-y-auto qv-scroll-hide bg-white">
-                            <div class="p-5 md:p-6 lg:p-7 pr-5 md:pr-6 lg:pr-7">
+                        <div class="max-h-[86vh] overflow-y-auto qv-scroll-hide bg-white flex flex-col">
+                            <div class="p-5 md:p-6 lg:p-7 pr-5 md:pr-6 lg:pr-7 flex-1">
                                 <div class="pr-12">
                                     <h2
                                         class="text-[28px] md:text-[32px] font-bold tracking-[-0.03em] text-gray-900 leading-none capitalize"
@@ -163,7 +172,6 @@
                                     </div>
                                 </template>
 
-                                {{-- Size first --}}
                                 <div class="mt-8">
                                     <div class="flex items-center justify-between">
                                         <h3 class="text-[16px] font-bold text-gray-900">Size</h3>
@@ -193,7 +201,6 @@
                                     </div>
                                 </div>
 
-                                {{-- Qty after size --}}
                                 <div class="mt-10">
                                     <h3 class="text-[16px] font-bold text-gray-900">Quantity</h3>
 
@@ -216,7 +223,6 @@
                                     </div>
                                 </div>
 
-                                {{-- Product details after qty --}}
                                 <div class="mt-10">
                                     <h3 class="text-[16px] font-bold text-gray-900">Product Details</h3>
 
@@ -240,7 +246,6 @@
                                     </div>
                                 </div>
 
-                                {{-- Description after details --}}
                                 <template x-if="quickView.product.description">
                                     <div class="mt-10">
                                         <h3 class="text-[16px] font-bold text-gray-900">Additional Description:</h3>
@@ -251,19 +256,23 @@
                                     </div>
                                 </template>
 
-                                {{-- Add to bag at bottom --}}
+                                <div class="h-24"></div>
+                            </div>
+
+                            <div class="sticky bottom-0 bg-white border-t border-gray-200 px-5 md:px-6 lg:px-7 py-4">
                                 <button
                                     type="button"
-                                    class="mt-10 w-full h-[56px] rounded-xl bg-black text-white text-[18px] font-bold transition hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    class="w-full h-[56px] rounded-xl bg-black text-white text-[18px] font-bold transition hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
                                     :disabled="!quickView.canAddToBag"
                                     @click="addQuickViewToCart()"
                                 >
                                     <span x-show="!quickView.selectedSize">Select Size To Add</span>
-                                    <span x-show="quickView.selectedSize && quickView.canAddToBag">Add To Bag</span>
+                                    <span x-show="quickView.selectedSize && quickView.canAddToBag">
+                                        Add To Bag
+                                        <span class="ml-2">PKR <span x-text="formatPrice((quickView.product?.discounted_price || 0) * quickView.qty)"></span></span>
+                                    </span>
                                     <span x-show="quickView.selectedSize && !quickView.canAddToBag && quickView.currentStock <= 0">Out Of Stock</span>
                                 </button>
-
-                                <div class="h-2"></div>
                             </div>
                         </div>
                     </div>
